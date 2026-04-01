@@ -1,0 +1,19 @@
+{
+  "name": "dss-cloud",
+  "version": "1.0.0",
+  "description": "Decision Support System for Cloud Provider Selection (MongoDB)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node seed.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^8.0.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

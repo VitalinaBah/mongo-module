@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSS — Візуалізація результатів</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f8f9fa; color: #1a1a1a; padding: 2rem; }
+  h1 { font-size: 1.4rem; font-weight: 500; margin-bottom: 0.4rem; }
+  p.sub { font-size: 0.875rem; color: #6b7280; margin-bottom: 2rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; }
+  .card h2 { font-size: 0.95rem; font-weight: 500; margin-bottom: 1rem; color: #374151; }
+  .method-tabs { display: flex; gap: 8px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .tab { padding: 6px 16px; border-radius: 20px; border: 1px solid #d1d5db;
+         font-size: 0.875rem; cursor: pointer; background: #fff; color: #374151; transition: all .15s; }
+  .tab.active { background: #1e40af; border-color: #1e40af; color: #fff; }
+  .ranking { list-style: none; }
+  .ranking li { display: flex; align-items: center; gap: 12px; padding: 8px 0;
+                border-bottom: 1px solid #f3f4f6; font-size: 0.9rem; }
+  .ranking li:last-child { border-bottom: none; }
+  .rank-num { width: 24px; height: 24px; border-radius: 50%; background: #e5e7eb;
+              display: flex; align-items: center; justify-content: center;
+              font-size: 0.75rem; font-weight: 500; flex-shrink: 0; }
+  .rank-num.gold   { background: #fde68a; color: #92400e; }
+  .rank-num.silver { background: #e5e7eb; color: #374151; }
+  .rank-num.bronze { background: #fed7aa; color: #9a3412; }
+  .rank-bar { flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+  .rank-bar-fill { height: 100%; background: #3b82f6; border-radius: 3px; transition: width .4s; }
+  .rank-score { font-size: 0.8rem; color: #6b7280; min-width: 50px; text-align: right; }
+  .explanation { font-size: 0.8rem; color: #4b5563; line-height: 1.6;
+                 background: #f9fafb; padding: 0.75rem; border-radius: 8px; margin-top: 0.75rem; }
+  .best-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem;
+                background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; margin-bottom: 8px; }
+  .matrix-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th { background: #f9fafb; padding: 6px 10px; text-align: left; font-weight: 500;
+       border-bottom: 1px solid #e5e7eb; color: #6b7280; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  tr:last-child td { border-bottom: none; }
+  .loading { text-align: center; color: #9ca3af; padding: 2rem; font-size: 0.9rem; }
+  .error { text-align: center; color: #dc2626; padding: 2rem; font-size: 0.9rem; }
+  canvas { max-height: 260px; }
+</style>
+</head>
+<body>
+
+<h1>DSS — Система підтримки прийняття рішень</h1>
+<p class="sub">Вибір хмарного провайдера · Порівняння методів WSM / SAW / TOPSIS</p>
+
+<div class="method-tabs" id="tabs">
+  <button class="tab active" data-method="SAW">SAW</button>
+  <button class="tab" data-method="WSM">WSM</button>
+  <button class="tab" data-method="TOPSIS">TOPSIS</button>
+  <button class="tab" data-method="ALL">Порівняння всіх</button>
+</div>
+
+<div id="content"><div class="loading">Завантаження даних...</div></div>
+
+<script>
+const API = '';
+let allData = null;
+let currentMethod = 'SAW';
+let radarChart = null, barChart = null;
+
+async function fetchAll() {
+  const r = await fetch(`${API}/api/analyze/all`);
+  const j = await r.json();
+  if (!j.success) throw new Error(j.error);
+  return j.data;
+}
+
+async function fetchMatrix() {
+  const r = await fetch(`${API}/api/matrix`);
+  const j = await r.json();
+  if (!j.success) throw new Error(j.error);
+  return j.data;
+}
+
+function rankColors(rank) {
+  return rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+}
+
+function renderSingle(method, data) {
+  const max = Math.max(...data.ranking.map(r => r.score));
+  const items = data.ranking.map(r => `
+    <li>
+      <div class="rank-num ${rankColors(r.rank)}">${r.rank}</div>
+      <span style="min-width:110px">${r.alternative}</span>
+      <div class="rank-bar"><div class="rank-bar-fill" style="width:${(r.score/max*100).toFixed(1)}%"></div></div>
+      <span class="rank-score">${r.score.toFixed(4)}</span>
+    </li>`).join('');
+
+  return `
+    <div class="grid">
+      <div class="card">
+        <div class="best-badge">Найкраща альтернатива: ${data.best}</div>
+        <h2>Рейтинг (${method})</h2>
+        <ul class="ranking">${items}</ul>
+        <div class="explanation">${data.explanation}</div>
+      </div>
+      <div class="card">
+        <h2>Інтегральні оцінки</h2>
+        <canvas id="bar-chart"></canvas>
+      </div>
+    </div>`;
+}
+
+function renderAll(all) {
+  const methods = Object.keys(all);
+  const alts = all[methods[0]].ranking.map(r => r.alternative);
+  const colors = ['#3b82f6', '#10b981', '#f59e0b'];
+
+  const rows = alts.map(alt => {
+    const cells = methods.map(m => {
+      const r = all[m].ranking.find(x => x.alternative === alt);
+      const isBest = all[m].best === alt;
+      return `<td style="${isBest ? 'font-weight:500;color:#166534' : ''}">#${r.rank} (${r.score.toFixed(3)})</td>`;
+    }).join('');
+    return `<tr><td><strong>${alt}</strong></td>${cells}</tr>`;
+  }).join('');
+
+  return `
+    <div class="card" style="margin-bottom:1.5rem">
+      <h2>Порівняння методів</h2>
+      <div class="matrix-wrap">
+        <table>
+          <thead><tr>
+            <th>Альтернатива</th>
+            ${methods.map(m => `<th>${m}</th>`).join('')}
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Ранги за всіма методами</h2>
+      <canvas id="radar-chart" style="max-height:320px"></canvas>
+    </div>`;
+}
+
+function drawBar(ranking) {
+  if (barChart) barChart.destroy();
+  const ctx = document.getElementById('bar-chart');
+  if (!ctx) return;
+  barChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ranking.map(r => r.alternative),
+      datasets: [{
+        label: 'Оцінка',
+        data: ranking.map(r => parseFloat(r.score.toFixed(4))),
+        backgroundColor: ranking.map((_, i) =>
+          ['#3b82f6','#10b981','#f59e0b','#ef4444'][i] + 'cc'),
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, grid: { color: '#f3f4f6' } } }
+    }
+  });
+}
+
+function drawRadar(all) {
+  if (radarChart) radarChart.destroy();
+  const ctx = document.getElementById('radar-chart');
+  if (!ctx) return;
+  const methods = Object.keys(all);
+  const alts = all[methods[0]].ranking.map(r => r.alternative);
+  const colors = ['#3b82f6','#10b981','#f59e0b'];
+
+  radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: alts,
+      datasets: methods.map((m, i) => ({
+        label: m,
+        data: alts.map(alt => {
+          const r = all[m].ranking.find(x => x.alternative === alt);
+          return parseFloat(r.score.toFixed(4));
+        }),
+        borderColor: colors[i],
+        backgroundColor: colors[i] + '22',
+        pointBackgroundColor: colors[i]
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { position: 'top' } },
+      scales: { r: { grid: { color: '#f3f4f6' }, ticks: { display: false } } }
+    }
+  });
+}
+
+async function render(method) {
+  const el = document.getElementById('content');
+  try {
+    if (!allData) allData = await fetchAll();
+
+    if (method === 'ALL') {
+      el.innerHTML = renderAll(allData);
+      setTimeout(() => drawRadar(allData), 50);
+    } else {
+      el.innerHTML = renderSingle(method, allData[method]);
+      setTimeout(() => drawBar(allData[method].ranking), 50);
+    }
+  } catch(e) {
+    el.innerHTML = `<div class="error">Помилка: ${e.message}<br>Переконайтесь що сервер запущено на порту 3000</div>`;
+  }
+}
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  currentMethod = tab.dataset.method;
+  render(currentMethod);
+});
+
+render('SAW');
+</script>
+</body>
+</html>
