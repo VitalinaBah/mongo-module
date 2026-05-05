@@ -1,6 +1,9 @@
 const CriteriaService = require('./CriteriaService');
 const AlternativeService = require('./AlternativeService');
+const RuleService = require('./RuleService');
 const Decision = require('../models/Decision');
+const Rule = require('../models/Rule');
+const Alternative = require('../models/Alternative');
 
 /**
  * Аналітичне ядро СППР.
@@ -200,6 +203,94 @@ class AnalyticsService {
     await decision.save();
 
     return { method: methodKey, ranking, best, explanation };
+  }
+
+  /**
+   * Аналіз чутливості: змінює вагу одного критерію в діапазоні
+   * та повертає, як змінюється рейтинг.
+   * @param {string} criteriaId
+   * @param {number[]} weightRange — список значень ваги для тестування
+   * @param {string} method
+   */
+  async sensitivity(criteriaId, weightRange = [0.1, 0.2, 0.3, 0.4, 0.5], method = 'SAW') {
+    const criteriaList = await CriteriaService.getAll();
+    const criteriaIds = criteriaList.map(c => c._id.toString());
+    const matrix = await AlternativeService.getMatrix(criteriaIds);
+    if (matrix.length === 0) throw new Error('No alternatives defined');
+
+    const targetIdx = criteriaList.findIndex(c => c._id.toString() === criteriaId);
+    if (targetIdx === -1) throw new Error(`Criteria ${criteriaId} not found`);
+
+    const results = [];
+    for (const newWeight of weightRange) {
+      // Перерозподілити решту ваг пропорційно
+      const others = criteriaList.filter((_, i) => i !== targetIdx);
+      const otherSum = others.reduce((s, c) => s + c.weight, 0);
+      const remainder = 1 - newWeight;
+      const factor = otherSum === 0 ? 0 : remainder / otherSum;
+
+      const adjusted = criteriaList.map((c, i) => ({
+        ...c.toObject ? c.toObject() : c,
+        weight: i === targetIdx ? newWeight : c.weight * factor
+      }));
+
+      const methodKey = method.toUpperCase();
+      let raw;
+      if (methodKey === 'WSM')         raw = this.wsm(matrix, adjusted);
+      else if (methodKey === 'SAW')    raw = this.saw(matrix, adjusted);
+      else if (methodKey === 'TOPSIS') raw = this.topsis(matrix, adjusted);
+      else throw new Error(`Unknown method: ${method}`);
+
+      const ranked = this._rank(raw);
+      results.push({ weight: newWeight, ranking: ranked, best: ranked[0].alternative });
+    }
+
+    return {
+      criteriaId,
+      criteriaName: criteriaList[targetIdx].name,
+      method,
+      results
+    };
+  }
+
+  /**
+   * Застосувати IF-THEN правила до результатів.
+   * Альтернатива з action=reject виключається; bonus/penalty корегують score.
+   */
+  async applyRules(ranking) {
+    const rules = await Rule.find({ enabled: true });
+    if (rules.length === 0) return { ranking, applied: [] };
+
+    const alts = await Alternative.find();
+    const altMap = new Map(alts.map(a => [a.name, a]));
+    const applied = [];
+    const adjusted = [];
+
+    for (const item of ranking) {
+      const alt = altMap.get(item.alternative);
+      if (!alt) { adjusted.push(item); continue; }
+      const altDoc = { name: alt.name, scores: Object.fromEntries(alt.scores) };
+
+      let score = item.score;
+      let rejected = false;
+      const triggered = [];
+
+      for (const rule of rules) {
+        if (RuleService.evaluate(rule, altDoc)) {
+          triggered.push(rule.name);
+          if (rule.action.type === 'reject') { rejected = true; break; }
+          if (rule.action.type === 'bonus')   score += rule.action.value;
+          if (rule.action.type === 'penalty') score -= rule.action.value;
+        }
+      }
+
+      if (triggered.length) {
+        applied.push({ alternative: item.alternative, rules: triggered, rejected });
+      }
+      if (!rejected) adjusted.push({ ...item, score });
+    }
+
+    return { ranking: this._rank(adjusted), applied };
   }
 
   /**

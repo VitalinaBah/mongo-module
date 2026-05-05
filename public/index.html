@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>СППР — Вибір хмарного провайдера (Лабораторна 1)</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">DSS</span>
+      <div>
+        <h1>Система підтримки прийняття рішень</h1>
+        <p class="sub">Вибір хмарного провайдера · Лабораторна 1 СППР</p>
+      </div>
+    </div>
+  </header>
+
+  <nav class="screen-tabs">
+    <button class="screen-tab active" data-screen="expertise">1. Експертиза</button>
+    <button class="screen-tab" data-screen="model">2. Модель та Дані</button>
+    <button class="screen-tab" data-screen="rules">3. Експертна логіка (Правила)</button>
+    <button class="screen-tab" data-screen="results">4. Результати та Аналіз</button>
+  </nav>
+
+  <main class="screen-container">
+    <!-- ─────────── ЕКРАН 1: ЕКСПЕРТИЗА ─────────── -->
+    <section class="screen active" id="screen-expertise">
+      <h2>Експертиза</h2>
+      <p class="hint">Завантажте CSV-файл з оцінками експертів (Google Forms) або введіть оцінки вручну.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Імпорт CSV-файлу</h3>
+          <p class="small">Очікуваний формат: <code>Експерт, Альтернатива, Критерій, Оцінка</code></p>
+          <form id="csv-form" enctype="multipart/form-data">
+            <input type="file" id="csv-file" name="file" accept=".csv" required />
+            <button type="submit" class="btn-primary">Імпортувати</button>
+          </form>
+          <div id="csv-status" class="status"></div>
+        </div>
+
+        <div class="card">
+          <h3>Узгодження оцінок експертів</h3>
+          <p class="small">Виберіть метод усереднення оцінок з усіх імпортованих експертів.</p>
+          <select id="agg-method">
+            <option value="average">Середнє арифметичне</option>
+            <option value="median">Медіана</option>
+            <option value="weighted">Зважене середнє</option>
+          </select>
+          <button class="btn-primary" id="btn-aggregate">Узгодити</button>
+          <pre id="agg-result" class="result-box"></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Список експертів</h3>
+        <div id="experts-list" class="list-empty">Експерти не завантажені</div>
+      </div>
+
+      <div class="card">
+        <h3>Ручне введення оцінок</h3>
+        <p class="small">Додайте альтернативу до конкретного критерію (порожній каркас).</p>
+        <button class="btn-secondary" disabled>Додати оцінку (TODO)</button>
+      </div>
+    </section>
+
+    <!-- ─────────── ЕКРАН 2: МОДЕЛЬ ТА ДАНІ ─────────── -->
+    <section class="screen" id="screen-model">
+      <h2>Модель та Дані</h2>
+      <p class="hint">Управління альтернативами, критеріями та матрицею оцінювання.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Критерії</h3>
+          <form id="criteria-form" class="inline-form">
+            <input type="text" id="crit-name" placeholder="Назва критерію" required />
+            <select id="crit-type">
+              <option value="maximize">maximize</option>
+              <option value="minimize">minimize</option>
+            </select>
+            <input type="number" id="crit-weight" step="0.05" min="0" max="1" placeholder="Вага (0-1)" required />
+            <button type="submit" class="btn-primary">Додати</button>
+          </form>
+          <div id="criteria-list"></div>
+          <div id="weights-validation" class="status"></div>
+        </div>
+
+        <div class="card">
+          <h3>Альтернативи</h3>
+          <form id="alt-form" class="inline-form">
+            <input type="text" id="alt-name" placeholder="Назва альтернативи" required />
+            <input type="text" id="alt-desc" placeholder="Опис" />
+            <button type="submit" class="btn-primary">Додати</button>
+          </form>
+          <div id="alternatives-list"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Матриця оцінювання</h3>
+        <div id="matrix-table" class="matrix-wrap">Завантаження…</div>
+      </div>
+    </section>
+
+    <!-- ─────────── ЕКРАН 3: ЕКСПЕРТНА ЛОГІКА (ПРАВИЛА) ─────────── -->
+    <section class="screen" id="screen-rules">
+      <h2>Експертна логіка (Правила)</h2>
+      <p class="hint">Задайте порогові значення (відсікання) та створіть правила <code>IF-THEN</code>.</p>
+
+      <div class="card">
+        <h3>Створити правило</h3>
+        <form id="rule-form">
+          <input type="text" id="rule-name" placeholder="Назва правила" required />
+          <input type="text" id="rule-desc" placeholder="Опис (необов'язково)" />
+
+          <div class="conditions-block">
+            <label>Умови IF (поки що — одна умова):</label>
+            <div class="cond-row">
+              <select id="cond-criteria"></select>
+              <select id="cond-op">
+                <option value=">">&gt;</option>
+                <option value="<">&lt;</option>
+                <option value=">=">≥</option>
+                <option value="<=">≤</option>
+                <option value="=">=</option>
+                <option value="!=">≠</option>
+              </select>
+              <input type="number" id="cond-value" step="0.01" placeholder="Значення" required />
+            </div>
+          </div>
+
+          <div class="action-block">
+            <label>THEN (дія):</label>
+            <select id="rule-action">
+              <option value="reject">reject (відхилити альтернативу)</option>
+              <option value="bonus">bonus (додати до оцінки)</option>
+              <option value="penalty">penalty (відняти від оцінки)</option>
+            </select>
+            <input type="number" id="rule-action-value" step="0.01" placeholder="Значення (для bonus/penalty)" />
+          </div>
+
+          <button type="submit" class="btn-primary">Зберегти правило</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Список правил</h3>
+        <div id="rules-list" class="list-empty">Правил ще немає</div>
+      </div>
+    </section>
+
+    <!-- ─────────── ЕКРАН 4: РЕЗУЛЬТАТИ ТА АНАЛІЗ ─────────── -->
+    <section class="screen" id="screen-results">
+      <h2>Результати та Аналіз</h2>
+      <p class="hint">Виберіть метод згортки, побачте фінальний рейтинг, пояснення та аналіз чутливості.</p>
+
+      <div class="card">
+        <h3>Метод згортки</h3>
+        <div class="method-tabs">
+          <button class="tab active" data-method="SAW">SAW</button>
+          <button class="tab" data-method="WSM">WSM</button>
+          <button class="tab" data-method="TOPSIS">TOPSIS</button>
+          <button class="tab" data-method="ALL">Порівняння всіх</button>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="apply-rules-checkbox" /> Застосувати IF-THEN правила
+        </label>
+      </div>
+
+      <div id="results-content"><div class="loading">Завантаження результатів…</div></div>
+
+      <div class="card">
+        <h3>Аналіз чутливості</h3>
+        <p class="small">Як зміниться рейтинг при зміні ваги одного критерію.</p>
+        <div class="inline-form">
+          <select id="sens-criteria"></select>
+          <select id="sens-method">
+            <option value="SAW">SAW</option>
+            <option value="WSM">WSM</option>
+            <option value="TOPSIS">TOPSIS</option>
+          </select>
+          <button id="btn-sensitivity" class="btn-primary">Запустити аналіз</button>
+        </div>
+        <div id="sensitivity-result"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    Лабораторна 1 СППР · Тех. стек: Node.js + Express + MongoDB · UI: HTML/CSS/JS + Chart.js
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

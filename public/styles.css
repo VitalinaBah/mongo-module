@@ -1,0 +1,341 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: #f3f4f6;
+  color: #1a1a1a;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ── Header ───────────────────────────────────────────────────── */
+.app-header {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: #fff;
+  padding: 1.25rem 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.brand { display: flex; align-items: center; gap: 1rem; }
+
+.logo {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 12px;
+  font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px;
+}
+
+.app-header h1 { font-size: 1.25rem; font-weight: 600; }
+.app-header .sub { font-size: 0.85rem; opacity: 0.85; }
+
+/* ── Tabs (screens) ──────────────────────────────────────────── */
+.screen-tabs {
+  display: flex;
+  gap: 4px;
+  background: #fff;
+  padding: 0 2rem;
+  border-bottom: 1px solid #e5e7eb;
+  overflow-x: auto;
+}
+
+.screen-tab {
+  background: none;
+  border: none;
+  padding: 14px 18px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #6b7280;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.screen-tab:hover { color: #1e40af; }
+.screen-tab.active {
+  color: #1e40af;
+  border-bottom-color: #1e40af;
+  font-weight: 600;
+}
+
+/* ── Screens ──────────────────────────────────────────────────── */
+.screen-container { padding: 1.5rem 2rem; max-width: 1200px; margin: 0 auto; }
+.screen { display: none; }
+.screen.active { display: block; }
+
+.screen h2 {
+  font-size: 1.4rem;
+  margin-bottom: 0.4rem;
+  color: #111827;
+}
+
+.hint {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Cards ───────────────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #1f2937;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .screen-container { padding: 1rem; }
+}
+
+/* ── Forms ───────────────────────────────────────────────────── */
+input[type="text"], input[type="number"], input[type="file"], select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+input:focus, select:focus { border-color: #3b82f6; }
+
+button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  font-weight: 500;
+}
+
+.btn-primary { background: #1e40af; color: #fff; }
+.btn-primary:hover { background: #1e3a8a; }
+.btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+
+.btn-secondary { background: #fff; color: #1e40af; border: 1px solid #d1d5db; }
+.btn-secondary:hover { background: #f9fafb; }
+
+.btn-danger { background: #ef4444; color: #fff; padding: 4px 10px; font-size: 0.8rem; }
+.btn-danger:hover { background: #dc2626; }
+
+.inline-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.inline-form input, .inline-form select { flex: 1; min-width: 120px; }
+
+#rule-form { display: flex; flex-direction: column; gap: 12px; }
+#rule-form input, #rule-form select { width: 100%; }
+
+.cond-row { display: flex; gap: 8px; }
+.cond-row select, .cond-row input { flex: 1; }
+
+.conditions-block, .action-block {
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.conditions-block label, .action-block label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin-top: 0.75rem;
+  cursor: pointer;
+}
+
+/* ── Lists ───────────────────────────────────────────────────── */
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.9rem;
+}
+
+.list-item:last-child { border-bottom: none; }
+
+.list-empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 1.25rem;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.tag {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #e0e7ff;
+  color: #1e40af;
+}
+
+.tag.minimize { background: #fee2e2; color: #991b1b; }
+.tag.maximize { background: #dcfce7; color: #166534; }
+
+/* ── Matrix table ────────────────────────────────────────────── */
+.matrix-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+th, td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+th {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+td input.cell-input {
+  width: 80px;
+  padding: 4px 6px;
+  font-size: 0.85rem;
+}
+
+/* ── Method tabs ────────────────────────────────────────────── */
+.method-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.tab {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid #d1d5db;
+  font-size: 0.85rem;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+}
+.tab.active { background: #1e40af; border-color: #1e40af; color: #fff; }
+
+/* ── Results ─────────────────────────────────────────────────── */
+.ranking { list-style: none; }
+.ranking li {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.9rem;
+}
+.ranking li:last-child { border-bottom: none; }
+
+.rank-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 600;
+  flex-shrink: 0;
+}
+.rank-num.gold   { background: #fde68a; color: #92400e; }
+.rank-num.silver { background: #e5e7eb; color: #374151; }
+.rank-num.bronze { background: #fed7aa; color: #9a3412; }
+
+.rank-bar { flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+.rank-bar-fill { height: 100%; background: #3b82f6; border-radius: 3px; transition: width .4s; }
+.rank-score { font-size: 0.85rem; color: #6b7280; min-width: 60px; text-align: right; }
+
+.best-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.8rem;
+  background: #dcfce7; color: #166534;
+  padding: 4px 12px; border-radius: 20px;
+  margin-bottom: 8px;
+}
+
+.explanation {
+  font-size: 0.85rem;
+  color: #4b5563;
+  line-height: 1.6;
+  background: #f9fafb;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-top: 0.75rem;
+  border-left: 3px solid #3b82f6;
+}
+
+canvas { max-height: 280px; }
+
+/* ── Status / utility ────────────────────────────────────────── */
+.small { font-size: 0.8rem; color: #6b7280; margin-bottom: 0.5rem; }
+.status { margin-top: 0.5rem; font-size: 0.85rem; }
+.status.ok { color: #166534; }
+.status.err { color: #991b1b; }
+.status.warn { color: #92400e; }
+
+.result-box {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.loading { text-align: center; color: #9ca3af; padding: 2rem; }
+.error { text-align: center; color: #dc2626; padding: 2rem; }
+
+code {
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: 0.85em;
+}
+
+.app-footer {
+  text-align: center;
+  padding: 1.5rem 2rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 2rem;
+  background: #fff;
+}

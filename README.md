@@ -1,66 +1,184 @@
 # DSS — Система підтримки прийняття рішень
-## Вибір хмарного провайдера (MongoDB + Node.js)
+## Лабораторна 1 СППР · Вибір хмарного провайдера
 
 ---
 
-## Предметна область
+## Мета лабораторної роботи
 
-Вибір оптимального хмарного провайдера для IT-компанії — реальна напівструктурована задача, яка потребує СППР, оскільки рішення залежить від набору кількісних і якісних критеріїв.
-
-**Множина альтернатив A:**
-- A1 = AWS (Amazon Web Services)
-- A2 = Azure (Microsoft)
-- A3 = Google Cloud Platform
-- A4 = DigitalOcean
-
-**Множина критеріїв C:**
-| Критерій | Тип | Вага |
-|----------|-----|------|
-| Вартість ($/міс) | minimize | 0.30 |
-| Надійність (uptime %) | maximize | 0.25 |
-| Швидкість (мс) | minimize | 0.20 |
-| Технічна підтримка (1-10) | maximize | 0.15 |
-| Масштабованість (1-10) | maximize | 0.10 |
+Сформувати архітектурне бачення майбутнього програмного продукту, вибрати інструменти для розробки та спроєктувати структуру графічного інтерфейсу відповідно до загальних вимог СППР.
 
 ---
 
-## Архітектура системи
+## 1. Стек технологій та архітектура
+
+### Предметна область
+Вибір оптимального хмарного провайдера для IT-компанії — реальна напівструктурована задача, яка потребує СППР, оскільки рішення залежить від набору кількісних та якісних критеріїв.
+
+**Множина альтернатив A:** AWS, Azure, Google Cloud Platform, DigitalOcean
+**Множина критеріїв C:** вартість, надійність (uptime), швидкість (latency), технічна підтримка, масштабованість.
+
+### Технологічний стек
+
+| Шар | Інструмент | Обґрунтування |
+|-----|------------|---------------|
+| Мова програмування | **JavaScript (Node.js 18+)** | Універсальна мова для backend і frontend, асинхронна I/O — оптимально для роботи з БД та API. |
+| Backend-фреймворк | **Express.js** | Мінімалістичний, гнучкий, легко інтегрується з Mongoose. Має широке ком'юніті. |
+| База даних | **MongoDB + Mongoose ODM** | Документна БД зручна для зберігання альтернатив зі змінною кількістю критеріїв та правил IF-THEN. Mongoose дає схеми та валідацію. |
+| Frontend | **HTML5 + CSS3 + Vanilla JS (SPA)** | Не потребує build-step, легко переноситься. Достатньо для прототипу СППР з 4 екранами. |
+| Візуалізація | **Chart.js 4.x** | Bar, Radar, Line — усі необхідні види графіків для рейтингу та аналізу чутливості. |
+| Парсинг CSV | **csv-parse** | Швидко обробляє експорти Google Forms у форматі CSV з кириличними заголовками. |
+| Завантаження файлів | **multer** | Стандартне рішення для multipart/form-data в Express. |
+
+> **Зміна стеку:** базовий стек (Node.js + MongoDB) залишається з модульної роботи. Додано frontend-шар (SPA) та два нових сервіси: `RuleService` (IF-THEN правила) та `ExpertService` (CSV-імпорт з Google Forms).
+
+### Архітектурний підхід — три-шарова MVC + REST
 
 ```
-Controller  ←→  Service  ←→  MongoDB
-   ↑               ↑
-   HTTP API      Analytics Engine
-                (WSM / SAW / TOPSIS)
+┌────────────────────────────────────────────┐
+│   Browser SPA  (public/index.html + app.js)│
+│   ─ 4 екрани: Експертиза / Модель /        │
+│              Правила / Результати          │
+└─────────────────┬──────────────────────────┘
+                  │ fetch JSON / FormData
+                  ▼
+┌────────────────────────────────────────────┐
+│   Express API  (controllers/dssController) │
+│   /api/criteria  /api/alternatives         │
+│   /api/rules     /api/experts              │
+│   /api/analyze   /api/sensitivity          │
+└─────────────────┬──────────────────────────┘
+                  │
+       ┌──────────┴──────────────────────────┐
+       ▼                                     ▼
+┌──────────────────┐                ┌──────────────────┐
+│ Service Layer    │                │ MongoDB          │
+│ ─ Analytics      │ ◄──── Mongoose─┤ ─ criteria       │
+│   (WSM/SAW/      │                │ ─ alternatives   │
+│   TOPSIS,        │                │ ─ rules          │
+│   sensitivity)   │                │ ─ experts        │
+│ ─ RuleEngine     │                │ ─ decisions      │
+│ ─ ExpertService  │                │ (snapshot history)│
+└──────────────────┘                └──────────────────┘
 ```
 
-**Шари системи:**
-- **Controller** (`controllers/dssController.js`) — обробка HTTP-запитів
-- **Service** (`services/`) — бізнес-логіка та аналітика
-- **Models** (`models/`) — MongoDB схеми
-- **Routes** (`routes/dssRoutes.js`) — маршрутизація
+- **Дані** зберігаються в MongoDB (criteria, alternatives, rules, experts, decisions).
+- **Обчислення** (WSM/SAW/TOPSIS, аналіз чутливості, rule engine) виконуються на сервері в Node.js.
+- **Графічний інтерфейс** — SPA на чистому JS, рендериться у браузері, спілкується з API через `fetch`.
+
+---
+
+## 2. Структура графічного інтерфейсу
+
+Інтерфейс реалізовано як **SPA з 4 екранами** (вкладки у верхній панелі):
+
+### Екран 1 — «Експертиза»
+- Завантаження CSV-файлу з оцінками експертів (Google Forms).
+- Список імпортованих експертів та їхньої кількості оцінок.
+- Узгодження оцінок експертів одним з 3 методів: **середнє арифметичне / медіана / зважене середнє**.
+- (Каркас) Ручне введення оцінок.
+
+### Екран 2 — «Модель та Дані»
+- CRUD для **критеріїв**: назва, тип (`maximize`/`minimize`), вага.
+- Перевірка валідності ваг (сума ≈ 1).
+- CRUD для **альтернатив**: назва, опис.
+- Інтерактивна **матриця оцінювання** — редагування оцінок прямо в комірках таблиці.
+
+### Екран 3 — «Експертна логіка (Правила)»
+- Створення правил у форматі **IF-THEN**.
+- Умова: `<критерій> <оператор {>, <, ≥, ≤, =, ≠}> <значення>`.
+- Дія: `reject` (відкинути альтернативу) / `bonus` (+ до оцінки) / `penalty` (− від оцінки).
+- Перемикач «увімкнено/вимкнено» для кожного правила.
+
+### Екран 4 — «Результати та Аналіз»
+- Перемикач методу згортки: **WSM / SAW / TOPSIS / Порівняння всіх**.
+- Прапорець «Застосувати IF-THEN правила» — інтегрує правила з Екрану 3.
+- Стовпчаста діаграма інтегральних оцінок + текстове пояснення рішення.
+- Радарна діаграма для порівняння методів.
+- **Аналіз чутливості**: змінює вагу одного критерію в діапазоні `[0.05 … 0.55]` і будує лінійний графік, як зміна ваги впливає на рейтинг альтернатив.
+
+---
+
+## 3. Сценарії використання (Use Cases)
+
+### UC-1 (Екран 2): редагування моделі
+Користувач **може додати, видалити або відредагувати** альтернативу/критерій.
+
+### UC-2 (Екран 1): імпорт CSV
+Користувач **може завантажити CSV-файл** з відповідями експертів з Google Forms (`Експерт, Альтернатива, Критерій, Оцінка`).
+
+### UC-3 (Екран 1): узгодження
+Користувач **може обрати один із 3 методів** узгодження експертних оцінок (середнє / медіана / зважене).
+
+### UC-4 (Екран 4): аналіз чутливості
+Користувач **може змінити вагу критерію** і побачити, як зміниться рейтинг (графік чутливості).
+
+### UC-5 (Екран 3): логічні правила
+Користувач **може задати IF-THEN правило** (напр. `IF Вартість > 500 THEN reject`) і вмикати/вимикати його одним кліком.
+
+### UC-6 (Екран 4): порівняння методів
+Користувач **може обрати метод згортки** (WSM/SAW/TOPSIS) або порівняти всі три одночасно.
 
 ---
 
 ## Установка та запуск
 
 ```bash
-# 1. Клонувати репозиторій
+# 1. Клонувати репозиторій і перейти в папку
 git clone <repo-url>
-cd dss-cloud
+cd mongo-module
 
 # 2. Встановити залежності
 npm install
 
-# 3. Запустити MongoDB локально (або вказати URI у .env)
+# 3. Запустити MongoDB локально (за замовчуванням mongodb://localhost:27017)
 # .env (опційно):
-# MONGO_URI=mongodb://localhost:27017/dss_cloud
-# PORT=3000
+#   MONGO_URI=mongodb://localhost:27017/dss_cloud
+#   PORT=3000
 
-# 4. Заповнити базу тестовими даними
+# 4. Заповнити базу тестовими даними (критерії + альтернативи)
 node seed.js
 
 # 5. Запустити сервер
 npm start
+# або з автоперезапуском:
+npm run dev
+
+# 6. Відкрити SPA у браузері
+open http://localhost:3000
+```
+
+> Якщо порт 3000 зайнятий: `PORT=3001 npm start`.
+
+---
+
+## Структура проекту
+
+```
+mongo-module/
+├── server.js                    # Express, статика, API mount
+├── db.js                        # підключення MongoDB
+├── seed.js                      # тестові дані
+├── sample-experts.csv           # приклад CSV для імпорту (3 експерти × 4 альт. × 5 крит.)
+├── package.json
+├── models/                      # Mongoose schemas
+│   ├── Criteria.js
+│   ├── Alternative.js
+│   ├── Decision.js
+│   ├── Rule.js                  # NEW (Лаб.1) — IF-THEN правила
+│   └── Expert.js                # NEW (Лаб.1) — імпорт з Google Forms CSV
+├── services/                    # бізнес-логіка
+│   ├── CriteriaService.js
+│   ├── AlternativeService.js
+│   ├── AnalyticsService.js      # WSM/SAW/TOPSIS + sensitivity + applyRules
+│   ├── RuleService.js           # NEW
+│   └── ExpertService.js         # NEW (CSV import + aggregate)
+├── controllers/dssController.js
+├── routes/dssRoutes.js
+├── public/                      # SPA (4 екрани)
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js
+└── visualize.html               # стара візуалізація (Лаб.0)
 ```
 
 ---
@@ -68,47 +186,69 @@ npm start
 ## API Reference
 
 ### Критерії
-```
-GET    /api/criteria               — список критеріїв
-POST   /api/criteria               — додати критерій
-DELETE /api/criteria/:id           — видалити
-GET    /api/criteria/validate      — перевірити суму ваг
-```
+| Метод | Шлях | Опис |
+|-------|------|------|
+| GET   | `/api/criteria`           | список критеріїв |
+| POST  | `/api/criteria`           | додати |
+| PUT   | `/api/criteria/:id`       | оновити |
+| DELETE| `/api/criteria/:id`       | видалити |
+| GET   | `/api/criteria/validate`  | перевірити суму ваг |
 
-**POST /api/criteria — тіло запиту:**
+### Альтернативи
+| Метод | Шлях | Опис |
+|-------|------|------|
+| GET   | `/api/alternatives` | список |
+| POST  | `/api/alternatives` | додати |
+| PUT   | `/api/alternatives/:id` | оновити |
+| DELETE| `/api/alternatives/:id` | видалити |
+| PATCH | `/api/alternatives/:id/score/:criteriaId` | задати оцінку |
+
+### Аналіз
+| Метод | Шлях | Опис |
+|-------|------|------|
+| GET | `/api/matrix` | матриця оцінювання |
+| GET | `/api/analyze?method=SAW&applyRules=true` | аналіз обраним методом |
+| GET | `/api/analyze/all` | три методи одразу |
+| GET | `/api/sensitivity/:criteriaId?method=SAW&weights=0.1,0.2,0.3` | аналіз чутливості |
+| GET | `/api/decisions` | історія рішень |
+
+### Правила (Експертна логіка) — NEW
+| Метод | Шлях | Опис |
+|-------|------|------|
+| GET    | `/api/rules`             | список |
+| POST   | `/api/rules`             | створити |
+| PUT    | `/api/rules/:id`         | оновити |
+| PATCH  | `/api/rules/:id/toggle`  | увімкнути/вимкнути |
+| DELETE | `/api/rules/:id`         | видалити |
+
+**Тіло POST /api/rules:**
 ```json
 {
-  "name": "Вартість",
-  "type": "minimize",
-  "weight": 0.30,
-  "description": "Щомісячна вартість"
+  "name": "Бюджетний ліміт",
+  "description": "Відкинути дорогі",
+  "conditions": [
+    { "criteriaId": "<ObjectId>", "operator": ">", "value": 500 }
+  ],
+  "combinator": "AND",
+  "action": { "type": "reject", "value": 0 }
 }
 ```
 
-### Альтернативи
-```
-GET    /api/alternatives                          — список
-POST   /api/alternatives                          — додати
-DELETE /api/alternatives/:id                      — видалити
-PATCH  /api/alternatives/:id/score/:criteriaId    — встановити оцінку
-```
+### Експерти — NEW
+| Метод | Шлях | Опис |
+|-------|------|------|
+| GET    | `/api/experts`             | список |
+| POST   | `/api/experts`             | створити вручну |
+| DELETE | `/api/experts/:id`         | видалити |
+| POST   | `/api/experts/import`      | імпорт CSV (multipart, поле `file`) |
+| GET    | `/api/experts/aggregate?method=average` | узгодити (`average`/`median`/`weighted`) |
 
-**POST /api/alternatives:**
-```json
-{ "name": "AWS", "description": "Amazon Web Services" }
+**Формат CSV для імпорту:**
 ```
-
-**PATCH /api/alternatives/:id/score/:criteriaId:**
-```json
-{ "score": 450 }
-```
-
-### Аналіз (СППР)
-```
-GET /api/matrix               — матриця оцінювання
-GET /api/analyze?method=SAW   — аналіз одним методом (WSM|SAW|TOPSIS)
-GET /api/analyze/all          — всі три методи
-GET /api/decisions            — історія рішень
+Експерт,Альтернатива,Критерій,Оцінка
+Іван Петренко,AWS,Вартість ($/міс),460
+Олена Коваль,AWS,Вартість ($/міс),440
+...
 ```
 
 ---
@@ -118,89 +258,33 @@ GET /api/decisions            — історія рішень
 ### WSM (Weighted Sum Model)
 Зважена сума без нормалізації:
 ```
-score_i = Σ(w_j × x_ij)
+score_i = Σ(w_j · x_ij)
 ```
-Для критеріїв типу `minimize` значення інвертується.
+Для критеріїв `minimize` значення інвертується (`-x_ij`).
 
 ### SAW (Simple Additive Weighting)
 Нормалізовані оцінки за діапазоном [0,1]:
 ```
 r_ij = (x_ij - min_j) / (max_j - min_j)   [maximize]
 r_ij = (max_j - x_ij) / (max_j - min_j)   [minimize]
-score_i = Σ(w_j × r_ij)
+score_i = Σ(w_j · r_ij)
 ```
 
 ### TOPSIS
 Вибір альтернативи, найближчої до ідеальної:
-```
-1. Нормалізація: v_ij = x_ij / √Σ(x_ij²)
-2. Зважена матриця: w_ij = w_j × v_ij
-3. Ідеал A+, антиідеал A-
-4. d+_i = √Σ(w_ij - A+_j)², d-_i = √Σ(w_ij - A-_j)²
-5. score_i = d-_i / (d+_i + d-_i)
-```
+1. Евклідова нормалізація: `v_ij = x_ij / √Σ(x_ij²)`
+2. Зважена матриця: `w_ij = w_j · v_ij`
+3. Ідеал `A⁺`, антиідеал `A⁻`
+4. `d⁺_i = √Σ(w_ij - A⁺_j)²`, `d⁻_i = √Σ(w_ij - A⁻_j)²`
+5. `score_i = d⁻_i / (d⁺_i + d⁻_i)`
 
----
-
-## Приклад результату GET /api/analyze/all
-
-```json
-{
-  "success": true,
-  "data": {
-    "SAW": {
-      "method": "SAW",
-      "ranking": [
-        { "alternative": "DigitalOcean", "score": 0.7821, "rank": 1 },
-        { "alternative": "Google Cloud", "score": 0.6543, "rank": 2 },
-        { "alternative": "Azure",        "score": 0.5234, "rank": 3 },
-        { "alternative": "AWS",          "score": 0.4123, "rank": 4 }
-      ],
-      "best": "DigitalOcean",
-      "explanation": "Метод SAW: найкращою альтернативою визначено \"DigitalOcean\"..."
-    },
-    "WSM": { ... },
-    "TOPSIS": { ... }
-  }
-}
-```
-
----
-
-## Структура MongoDB
-
-**Collection `alternatives`:**
-```json
-{
-  "_id": "ObjectId",
-  "name": "AWS",
-  "description": "...",
-  "scores": { "<criteriaId>": 450, ... }
-}
-```
-
-**Collection `criteria`:**
-```json
-{
-  "_id": "ObjectId",
-  "name": "Вартість",
-  "type": "minimize",
-  "weight": 0.30
-}
-```
-
-**Collection `decisions`:**
-```json
-{
-  "method": "SAW",
-  "ranking": [...],
-  "best": "DigitalOcean",
-  "explanation": "...",
-  "snapshot": { "criteria": [...], "alternatives": [...] }
-}
-```
+### Аналіз чутливості (NEW)
+Для обраного критерію `c` змінюємо його вагу `w_c` в діапазоні `[0.05, 0.55]`,
+решту ваг масштабуємо пропорційно так, щоб `Σw_j = 1`. Для кожної точки
+запускається обраний метод (WSM/SAW/TOPSIS), результати агрегуються в графік
+залежності оцінок альтернатив від `w_c`.
 
 ---
 
 ## Автор
-Модульний контроль — Бази даних (MongoDB)
+Лабораторна 1 СППР — продовження модульної роботи з MongoDB.

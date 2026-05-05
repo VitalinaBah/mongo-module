@@ -1,7 +1,7 @@
 {
   "name": "dss-cloud",
-  "version": "1.0.0",
-  "description": "Decision Support System for Cloud Provider Selection (MongoDB)",
+  "version": "1.1.0",
+  "description": "Decision Support System for Cloud Provider Selection (Lab 1 SPPR)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,9 +9,11 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
+    "csv-parse": "^5.6.0",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "mongoose": "^8.0.0",
-    "dotenv": "^16.3.1"
+    "multer": "^2.1.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
