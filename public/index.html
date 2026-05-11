@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>СППР — Вибір хмарного провайдера</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <h1>СППР — Вибір хмарного провайдера</h1>
+  <nav id="tabs">
+    <button class="tab active" data-tab="expertise">Експертиза</button>
+    <button class="tab" data-tab="model">Модель та Дані</button>
+    <button class="tab" data-tab="rules">Правила</button>
+    <button class="tab" data-tab="results">Результати</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ЕКРАН 1 — ЕКСПЕРТИЗА
+═══════════════════════════════════════════════════════════ -->
+<section id="tab-expertise" class="tab-content active">
+  <h2>Експертиза</h2>
+  <div class="cards-row">
+
+    <!-- Імпорт з Google Sheets -->
+    <div class="card">
+      <h3>Імпорт з Google Sheets</h3>
+      <label>URL таблиці:</label>
+      <input type="url" id="expertSheetsUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+      <button onclick="importExpertsSheets()">Імпортувати</button>
+      <p class="hint">Таблиця повинна бути опублікована («Файл → Поділитися → Опублікувати»).<br>
+        Формат: Ім'я | Альтернатива | Критерій1 | Критерій2 | ...</p>
+    </div>
+
+    <!-- Імпорт CSV -->
+    <div class="card">
+      <h3>Імпорт CSV-файлу</h3>
+      <input type="file" id="expertCSV" accept=".csv">
+      <button onclick="importExpertsCSV()">Завантажити</button>
+      <p class="hint">Формат такий самий, як у Google Sheets.</p>
+    </div>
+
+    <!-- Узгодження -->
+    <div class="card">
+      <h3>Узгодження оцінок</h3>
+      <label>Метод:</label>
+      <select id="aggregMethod">
+        <option value="mean">Середнє арифметичне</option>
+        <option value="median">Медіана</option>
+        <option value="weighted">Зважене середнє</option>
+      </select>
+      <button onclick="aggregateExperts()">Узгодити (preview)</button>
+      <button class="btn-green" onclick="applyAggregated()">Застосувати як оцінки</button>
+      <div id="aggregResult" class="small-table"></div>
+    </div>
+  </div>
+
+  <!-- Список експертів -->
+  <div class="card full">
+    <h3>Список експертів</h3>
+    <table id="expertsTable">
+      <thead><tr><th>Ім'я</th><th>Джерело</th><th>Оцінок</th><th>Вага</th><th></th></tr></thead>
+      <tbody id="expertsBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Голосування за ваги -->
+  <h2>Голосування за ваги критеріїв</h2>
+  <div class="cards-row">
+    <div class="card">
+      <h3>Імпорт голосування з Google Sheets</h3>
+      <label>Метод голосування:</label>
+      <select id="voteMethodSheets">
+        <option value="borda">Метод Борда</option>
+        <option value="plurality">Абсолютна більшість</option>
+        <option value="condorcet">Метод Кондорсе</option>
+        <option value="approval">Схвальне голосування</option>
+      </select>
+      <label>URL таблиці:</label>
+      <input type="url" id="voteSheetsUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+      <button onclick="importVoteSheets()">Імпортувати голосування</button>
+    </div>
+    <div class="card">
+      <h3>Імпорт голосування з CSV</h3>
+      <label>Метод голосування:</label>
+      <select id="voteMethodCSV">
+        <option value="borda">Метод Борда</option>
+        <option value="plurality">Абсолютна більшість</option>
+        <option value="condorcet">Метод Кондорсе</option>
+        <option value="approval">Схвальне голосування</option>
+      </select>
+      <input type="file" id="voteCSV" accept=".csv">
+      <button onclick="importVoteCSV()">Завантажити</button>
+    </div>
+  </div>
+
+  <div class="card full">
+    <h3>Сесії голосування</h3>
+    <table id="votesTable">
+      <thead><tr><th>Дата</th><th>Метод</th><th>Джерело</th><th>Результати ваг</th><th></th></tr></thead>
+      <tbody id="votesBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ЕКРАН 2 — МОДЕЛЬ ТА ДАНІ
+═══════════════════════════════════════════════════════════ -->
+<section id="tab-model" class="tab-content">
+  <h2>Модель та Дані</h2>
+  <div class="cards-row">
+
+    <!-- Критерії -->
+    <div class="card">
+      <h3>Критерії</h3>
+      <form onsubmit="addCriteria(event)">
+        <input type="text"   id="cName"   placeholder="Назва" required>
+        <select id="cType">
+          <option value="maximize">maximize</option>
+          <option value="minimize">minimize</option>
+        </select>
+        <input type="number" id="cWeight" placeholder="Вага (0-1)" step="0.01" min="0" max="1" required>
+        <input type="number" id="cThreshold" placeholder="Поріг (необов'язково)" step="any">
+        <button type="submit">Додати критерій</button>
+      </form>
+      <div id="weightsStatus" class="badge"></div>
+      <table id="criteriaTable">
+        <thead><tr><th>Назва</th><th>Тип</th><th>Вага</th><th>Поріг</th><th></th></tr></thead>
+        <tbody id="criteriaBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Альтернативи -->
+    <div class="card">
+      <h3>Альтернативи</h3>
+      <form onsubmit="addAlternative(event)">
+        <input type="text" id="aName" placeholder="Назва" required>
+        <input type="text" id="aDesc" placeholder="Опис">
+        <button type="submit">Додати альтернативу</button>
+      </form>
+      <ul id="altsList"></ul>
+    </div>
+  </div>
+
+  <!-- Матриця оцінювання -->
+  <div class="card full">
+    <h3>Матриця оцінювання <button onclick="loadMatrix()">Оновити</button></h3>
+    <div id="matrixContainer" class="matrix-scroll"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ЕКРАН 3 — ПРАВИЛА
+═══════════════════════════════════════════════════════════ -->
+<section id="tab-rules" class="tab-content">
+  <h2>Експертна логіка (Правила IF-THEN)</h2>
+  <div class="cards-row">
+    <div class="card">
+      <h3>Додати правило</h3>
+      <form onsubmit="addRule(event)">
+        <input type="text" id="rName" placeholder="Назва правила" required>
+        <input type="text" id="rDesc" placeholder="Опис (необов'язково)">
+        <label>IF:</label>
+        <div class="rule-condition">
+          <select id="rCriteria"></select>
+          <select id="rOperator">
+            <option value=">">&gt;</option>
+            <option value="<">&lt;</option>
+            <option value=">=">&ge;</option>
+            <option value="<=">&le;</option>
+            <option value="=">=</option>
+            <option value="!=">≠</option>
+          </select>
+          <input type="number" id="rValue" placeholder="Значення" step="any" required>
+        </div>
+        <label>THEN:</label>
+        <div class="rule-action">
+          <select id="rAction" onchange="toggleActionValue()">
+            <option value="reject">reject (відкинути)</option>
+            <option value="bonus">bonus (бонус %)</option>
+            <option value="penalty">penalty (штраф %)</option>
+          </select>
+          <input type="number" id="rActionValue" placeholder="%" min="0" max="100" style="display:none">
+        </div>
+        <button type="submit">Зберегти правило</button>
+      </form>
+    </div>
+
+    <!-- Порогові значення -->
+    <div class="card">
+      <h3>Порогові значення критеріїв</h3>
+      <p class="hint">Налаштуйте пороги в секції «Критерії» (Екран 2).<br>
+        Поточні пороги — для довідки:</p>
+      <table id="thresholdsTable">
+        <thead><tr><th>Критерій</th><th>Тип</th><th>Поріг</th></tr></thead>
+        <tbody id="thresholdsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card full">
+    <h3>Список правил</h3>
+    <table id="rulesTable">
+      <thead><tr><th>Назва</th><th>Умова IF</th><th>Дія THEN</th><th>Стан</th><th></th></tr></thead>
+      <tbody id="rulesBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ЕКРАН 4 — РЕЗУЛЬТАТИ ТА АНАЛІЗ
+═══════════════════════════════════════════════════════════ -->
+<section id="tab-results" class="tab-content">
+  <h2>Результати та Аналіз</h2>
+
+  <!-- Метод + налаштування -->
+  <div class="card full">
+    <h3>Параметри аналізу</h3>
+    <div class="methods-bar">
+      <button class="method-btn active" data-method="SAW" onclick="setMethod(this)">SAW (адитивна)</button>
+      <button class="method-btn" data-method="WSM"        onclick="setMethod(this)">WSM</button>
+      <button class="method-btn" data-method="TOPSIS"     onclick="setMethod(this)">TOPSIS</button>
+      <button class="method-btn" data-method="CAUTIOUS"   onclick="setMethod(this)">Обережна (min)</button>
+      <button class="method-btn" data-method="MULTIPLICATIVE" onclick="setMethod(this)">Мультиплікативна</button>
+    </div>
+    <label>
+      <input type="checkbox" id="applyRulesChk"> Застосувати IF-THEN правила
+    </label>
+    <button class="btn-green" onclick="runAnalysis()">Запустити аналіз</button>
+    <button onclick="runAllMethods()">Порівняти всі методи</button>
+    <button onclick="loadStability()">Аналіз стабільності</button>
+  </div>
+
+  <div class="cards-row">
+    <!-- Рейтинг -->
+    <div class="card">
+      <h3>Рейтинг альтернатив <span id="methodBadge" class="badge">SAW</span></h3>
+      <ol id="rankingList"></ol>
+      <div id="rejectedSection" style="display:none">
+        <h4>Відкинуто пороговим фільтром:</h4>
+        <ul id="rejectedList"></ul>
+      </div>
+      <div id="appliedRulesSection" style="display:none">
+        <h4>Застосовані правила:</h4>
+        <ul id="appliedRulesList"></ul>
+      </div>
+      <div id="explanationBox" class="explanation"></div>
+    </div>
+
+    <!-- Діаграма -->
+    <div class="card">
+      <h3>Інтегральні оцінки</h3>
+      <canvas id="barChart" height="250"></canvas>
+    </div>
+  </div>
+
+  <!-- Порівняння методів -->
+  <div class="card full" id="allMethodsCard" style="display:none">
+    <h3>Порівняння всіх методів</h3>
+    <div id="allMethodsTable"></div>
+    <canvas id="radarChart" height="200"></canvas>
+  </div>
+
+  <!-- Аналіз стабільності -->
+  <div class="card full" id="stabilityCard" style="display:none">
+    <h3>Аналіз стабільності рішення</h3>
+    <div id="stabilityContent"></div>
+  </div>
+
+  <!-- Аналіз чутливості -->
+  <div class="card full">
+    <h3>Аналіз чутливості</h3>
+    <div class="row-inputs">
+      <label>Критерій:</label>
+      <select id="sensCriteria"></select>
+      <label>Метод:</label>
+      <select id="sensMethod">
+        <option value="SAW">SAW</option>
+        <option value="WSM">WSM</option>
+        <option value="TOPSIS">TOPSIS</option>
+        <option value="CAUTIOUS">CAUTIOUS</option>
+        <option value="MULTIPLICATIVE">MULTIPLICATIVE</option>
+      </select>
+      <button onclick="runSensitivity()">Запустити</button>
+    </div>
+    <canvas id="sensChart" height="220"></canvas>
+  </div>
+
+  <!-- Сценарний аналіз -->
+  <div class="card full">
+    <h3>Сценарний аналіз</h3>
+    <div id="scenariosBuilder"></div>
+    <button onclick="addScenario()">+ Додати сценарій</button>
+    <button class="btn-green" onclick="runScenarios()">Порівняти сценарії</button>
+    <div id="scenariosResult"></div>
+  </div>
+</section>
+
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

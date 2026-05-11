@@ -1,122 +1,105 @@
-/**
- * Seed script — заповнює MongoDB тестовими даними.
- * Запуск: node seed.js
- *
- * Предметна область: Вибір хмарного провайдера для стартапу
- * Альтернативи: AWS, Azure, Google Cloud, DigitalOcean
- * Критерії: вартість, надійність, швидкість, підтримка, масштабованість
- */
 require('dotenv').config();
-const mongoose = require('mongoose');
-const Criteria = require('./models/Criteria');
+const mongoose   = require('mongoose');
+const connectDB  = require('./db');
+const Criteria   = require('./models/Criteria');
 const Alternative = require('./models/Alternative');
-const Decision = require('./models/Decision');
-
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/dss_cloud';
-
-// ── Дані ──────────────────────────────────────────────────────────────────
-
-const criteriaData = [
-  {
-    name: 'Вартість ($/міс)',
-    description: 'Середньомісячна вартість базового плану в доларах США',
-    type: 'minimize',
-    weight: 0.30
-  },
-  {
-    name: 'Надійність (uptime %)',
-    description: 'Гарантований рівень доступності сервісу',
-    type: 'maximize',
-    weight: 0.25
-  },
-  {
-    name: 'Швидкість (мс)',
-    description: 'Середня затримка відповіді (latency) у мілісекундах',
-    type: 'minimize',
-    weight: 0.20
-  },
-  {
-    name: 'Технічна підтримка (1-10)',
-    description: 'Оцінка якості та доступності технічної підтримки',
-    type: 'maximize',
-    weight: 0.15
-  },
-  {
-    name: 'Масштабованість (1-10)',
-    description: 'Можливості горизонтального та вертикального масштабування',
-    type: 'maximize',
-    weight: 0.10
-  }
-];
-
-// Матриця оцінювання: рядки = альтернативи, стовпці = критерії (у порядку criteriaData)
-const alternativesData = [
-  {
-    name: 'AWS',
-    description: 'Amazon Web Services — найбільший хмарний провайдер',
-    rawScores: [450, 99.99, 45, 9, 10]
-  },
-  {
-    name: 'Azure',
-    description: 'Microsoft Azure — хмарна платформа від Microsoft',
-    rawScores: [400, 99.95, 55, 8, 9]
-  },
-  {
-    name: 'Google Cloud',
-    description: 'Google Cloud Platform — платформа від Google',
-    rawScores: [380, 99.95, 40, 7, 9]
-  },
-  {
-    name: 'DigitalOcean',
-    description: 'DigitalOcean — провайдер для розробників і стартапів',
-    rawScores: [100, 99.90, 30, 6, 7]
-  }
-];
-
-// ── Seed ──────────────────────────────────────────────────────────────────
+const Rule       = require('./models/Rule');
+const Expert     = require('./models/Expert');
 
 async function seed() {
-  await mongoose.connect(MONGO_URI);
-  console.log('Connected to MongoDB');
+  await connectDB();
+  console.log('Seeding...');
 
-  // Очищення
-  await Promise.all([
-    Criteria.deleteMany({}),
-    Alternative.deleteMany({}),
-    Decision.deleteMany({})
+  // Очистити колекції
+  await Promise.all([Criteria.deleteMany(), Alternative.deleteMany(), Rule.deleteMany(), Expert.deleteMany()]);
+
+  // ── Критерії ──────────────────────────────────────────────────
+  const criteria = await Criteria.insertMany([
+    { name: 'Вартість',         type: 'minimize', weight: 0.30, threshold: 800  },
+    { name: 'Надійність',       type: 'maximize', weight: 0.25, threshold: 99.5 },
+    { name: 'Швидкість',        type: 'minimize', weight: 0.20, threshold: null },
+    { name: 'Підтримка',        type: 'maximize', weight: 0.15, threshold: null },
+    { name: 'Масштабованість',  type: 'maximize', weight: 0.10, threshold: null }
   ]);
-  console.log('Collections cleared');
+  console.log(`✓ ${criteria.length} criteria`);
 
-  // Критерії
-  const criteria = await Criteria.insertMany(criteriaData);
-  console.log(`Inserted ${criteria.length} criteria`);
+  const idMap = {};
+  criteria.forEach(c => { idMap[c.name] = c._id.toString(); });
 
-  // Альтернативи + оцінки
-  for (const altData of alternativesData) {
-    const scores = new Map();
-    criteria.forEach((c, idx) => {
-      scores.set(c._id.toString(), altData.rawScores[idx]);
-    });
-    await Alternative.create({
-      name: altData.name,
-      description: altData.description,
-      scores
-    });
-  }
-  console.log(`Inserted ${alternativesData.length} alternatives`);
+  // ── Альтернативи + оцінки ────────────────────────────────────
+  const altData = [
+    { name: 'AWS',          description: 'Amazon Web Services',      scores: [450, 99.99, 45, 8, 9] },
+    { name: 'Azure',        description: 'Microsoft Azure',          scores: [400, 99.95, 55, 9, 8] },
+    { name: 'Google Cloud', description: 'Google Cloud Platform',    scores: [380, 99.90, 40, 7, 10] },
+    { name: 'DigitalOcean', description: 'DigitalOcean',             scores: [120, 99.70, 35, 6, 6]  }
+  ];
+  const critNames = ['Вартість','Надійність','Швидкість','Підтримка','Масштабованість'];
+  const alternatives = await Alternative.insertMany(altData.map(a => {
+    const scores = {};
+    critNames.forEach((n, i) => { scores[idMap[n]] = a.scores[i]; });
+    return { name: a.name, description: a.description, scores };
+  }));
+  console.log(`✓ ${alternatives.length} alternatives`);
 
-  // Матриця для контролю
-  console.log('\n=== Матриця оцінювання ===');
-  console.log('Альтернатива\t\t| ' + criteriaData.map(c => c.name.slice(0, 12)).join(' | '));
-  alternativesData.forEach(a => {
-    console.log(`${a.name.padEnd(20)}| ${a.rawScores.join('\t\t| ')}`);
-  });
+  // ── Правила ───────────────────────────────────────────────────
+  const rules = await Rule.insertMany([
+    {
+      name: 'Бюджетний ліміт',
+      description: 'Відкидає провайдерів дорожчих за $700/міс',
+      condition: { criteriaName: 'Вартість', operator: '>', value: 700 },
+      action: { type: 'reject', value: 0 },
+      enabled: false
+    },
+    {
+      name: 'Бонус за надійність',
+      description: 'Бонус +10% для uptime > 99.95%',
+      condition: { criteriaName: 'Надійність', operator: '>', value: 99.95 },
+      action: { type: 'bonus', value: 10 },
+      enabled: false
+    },
+    {
+      name: 'Штраф за повільність',
+      description: 'Штраф -5% для latency > 50мс',
+      condition: { criteriaName: 'Швидкість', operator: '>', value: 50 },
+      action: { type: 'penalty', value: 5 },
+      enabled: false
+    }
+  ]);
+  console.log(`✓ ${rules.length} rules`);
 
-  console.log('\nSeed completed! Run `node server.js` then GET /api/analyze/all');
-  process.exit(0);
+  // ── Тестові експерти ─────────────────────────────────────────
+  const experts = await Expert.insertMany([
+    {
+      name: 'Іван Петренко', source: 'manual', weight: 1,
+      ratings: [
+        { alternativeName: 'AWS',          criteriaName: 'Вартість', score: 450 },
+        { alternativeName: 'AWS',          criteriaName: 'Надійність', score: 99.99 },
+        { alternativeName: 'Azure',        criteriaName: 'Вартість', score: 400 },
+        { alternativeName: 'Azure',        criteriaName: 'Надійність', score: 99.95 },
+        { alternativeName: 'Google Cloud', criteriaName: 'Вартість', score: 380 },
+        { alternativeName: 'Google Cloud', criteriaName: 'Надійність', score: 99.90 },
+        { alternativeName: 'DigitalOcean', criteriaName: 'Вартість', score: 120 },
+        { alternativeName: 'DigitalOcean', criteriaName: 'Надійність', score: 99.70 }
+      ]
+    },
+    {
+      name: 'Олена Коваль', source: 'manual', weight: 1.2,
+      ratings: [
+        { alternativeName: 'AWS',          criteriaName: 'Вартість', score: 460 },
+        { alternativeName: 'AWS',          criteriaName: 'Надійність', score: 99.98 },
+        { alternativeName: 'Azure',        criteriaName: 'Вартість', score: 390 },
+        { alternativeName: 'Azure',        criteriaName: 'Надійність', score: 99.96 },
+        { alternativeName: 'Google Cloud', criteriaName: 'Вартість', score: 370 },
+        { alternativeName: 'Google Cloud', criteriaName: 'Надійність', score: 99.92 },
+        { alternativeName: 'DigitalOcean', criteriaName: 'Вартість', score: 130 },
+        { alternativeName: 'DigitalOcean', criteriaName: 'Надійність', score: 99.65 }
+      ]
+    }
+  ]);
+  console.log(`✓ ${experts.length} experts`);
+
+  console.log('\n✅ Seed complete! Run: npm start');
+  mongoose.connection.close();
 }
 
-seed().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+seed().catch(e => { console.error(e); process.exit(1); });

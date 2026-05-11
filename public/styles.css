@@ -1,0 +1,130 @@
+/* ── Reset & Base ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #1a1a2e; min-height: 100vh; }
+
+/* ── Header / Nav ─────────────────────────────────────── */
+header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; padding: 0; box-shadow: 0 2px 12px rgba(0,0,0,.3); }
+header h1 { padding: 18px 28px 6px; font-size: 1.3rem; letter-spacing: .5px; opacity: .95; }
+nav#tabs { display: flex; gap: 4px; padding: 0 24px; }
+button.tab { background: transparent; border: none; color: rgba(255,255,255,.65); padding: 12px 22px; cursor: pointer; font-size: .95rem; border-bottom: 3px solid transparent; transition: all .2s; }
+button.tab:hover { color: #fff; }
+button.tab.active { color: #4cc9f0; border-bottom-color: #4cc9f0; font-weight: 600; }
+
+/* ── Main layout ──────────────────────────────────────── */
+main { max-width: 1300px; margin: 0 auto; padding: 28px 20px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+h2 { font-size: 1.4rem; color: #16213e; margin: 0 0 18px; padding-bottom: 8px; border-bottom: 2px solid #4cc9f0; }
+
+/* ── Cards ────────────────────────────────────────────── */
+.cards-row { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
+.card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 20px; flex: 1; min-width: 280px; }
+.card.full { width: 100%; min-width: 0; margin-bottom: 18px; }
+.card h3 { font-size: 1rem; color: #16213e; margin-bottom: 14px; font-weight: 600; border-left: 4px solid #4cc9f0; padding-left: 10px; }
+
+/* ── Forms ────────────────────────────────────────────── */
+input[type=text], input[type=url], input[type=number], input[type=file], select, textarea {
+  width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 6px;
+  font-size: .9rem; margin-bottom: 10px; background: #fafafa; transition: border-color .2s;
+}
+input:focus, select:focus { outline: none; border-color: #4cc9f0; background: #fff; }
+label { display: block; font-size: .82rem; color: #6b7280; margin-bottom: 4px; font-weight: 500; }
+.hint { font-size: .78rem; color: #9ca3af; margin-top: 6px; line-height: 1.5; }
+
+/* ── Buttons ──────────────────────────────────────────── */
+button { display: inline-block; padding: 9px 18px; background: #4361ee; color: #fff; border: none;
+  border-radius: 6px; cursor: pointer; font-size: .88rem; font-weight: 500; margin-right: 6px;
+  margin-bottom: 6px; transition: background .2s, transform .1s; }
+button:hover { background: #3451d1; }
+button:active { transform: scale(.97); }
+.btn-green { background: #10b981; }
+.btn-green:hover { background: #059669; }
+.btn-red { background: #ef4444; }
+.btn-red:hover { background: #dc2626; }
+.btn-sm { padding: 5px 11px; font-size: .78rem; margin: 0 2px; }
+.btn-outline { background: transparent; color: #4361ee; border: 1px solid #4361ee; }
+.btn-outline:hover { background: #eff1ff; }
+
+/* ── Tables ───────────────────────────────────────────── */
+table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+th { background: #f1f5f9; text-align: left; padding: 9px 12px; border-bottom: 2px solid #e2e8f0; color: #374151; font-weight: 600; }
+td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8fafc; }
+.matrix-scroll { overflow-x: auto; }
+.matrix-scroll table th, .matrix-scroll table td { white-space: nowrap; }
+input.cell-score { width: 80px; padding: 4px 8px; margin: 0; border: 1px solid #d1d5db; border-radius: 4px; text-align: center; }
+
+/* ── Badges ───────────────────────────────────────────── */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: .75rem; font-weight: 600; margin-left: 6px; }
+.badge-ok  { background: #d1fae5; color: #065f46; }
+.badge-err { background: #fee2e2; color: #991b1b; }
+.badge-blue { background: #dbeafe; color: #1d4ed8; }
+
+/* ── Ranking list ─────────────────────────────────────── */
+#rankingList { list-style: none; padding: 0; }
+#rankingList li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+.rank-num  { font-size: 1.3rem; font-weight: 700; color: #4361ee; width: 32px; text-align: center; }
+.rank-name { font-weight: 600; flex: 1; }
+.rank-score { font-size: .88rem; color: #6b7280; }
+.rank-bar-wrap { flex: 1; background: #e5e7eb; border-radius: 4px; height: 8px; min-width: 60px; }
+.rank-bar { height: 8px; background: #4cc9f0; border-radius: 4px; transition: width .5s; }
+.rank-1 .rank-num { color: #f59e0b; }
+.rank-1 .rank-bar { background: #f59e0b; }
+
+/* ── Explanation ──────────────────────────────────────── */
+.explanation { background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 12px 16px; border-radius: 6px; font-size: .88rem; line-height: 1.6; margin-top: 14px; color: #0c4a6e; }
+
+/* ── Methods bar ──────────────────────────────────────── */
+.methods-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.method-btn { background: #f1f5f9; color: #374151; border: 2px solid #e2e8f0; padding: 8px 16px; }
+.method-btn:hover { background: #e2e8f0; }
+.method-btn.active { background: #4361ee; color: #fff; border-color: #4361ee; }
+
+/* ── Rule condition/action ────────────────────────────── */
+.rule-condition, .rule-action { display: flex; gap: 8px; }
+.rule-condition select, .rule-action select { flex: 1; margin-bottom: 10px; }
+.rule-condition input { width: 100px; flex-shrink: 0; }
+
+/* ── Toggle switch ────────────────────────────────────── */
+.toggle-wrap { display: flex; align-items: center; gap: 8px; }
+.toggle { position: relative; width: 42px; height: 22px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #cbd5e1; border-radius: 22px; transition: .3s; }
+.slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .3s; }
+input:checked + .slider { background: #10b981; }
+input:checked + .slider:before { transform: translateX(20px); }
+
+/* ── Scenario builder ─────────────────────────────────── */
+.scenario-row { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+.scenario-row h4 { margin-bottom: 10px; color: #374151; }
+.scenario-weights { display: flex; flex-wrap: wrap; gap: 10px; }
+.scenario-weight-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.scenario-weight-item label { font-size: .78rem; color: #6b7280; }
+.scenario-weight-item input { width: 80px; margin: 0; }
+.scenario-result-card { background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; border-radius: 6px; margin-bottom: 10px; }
+.scenario-result-card h4 { color: #065f46; margin-bottom: 6px; }
+
+/* ── Row inputs ───────────────────────────────────────── */
+.row-inputs { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.row-inputs label { margin: 0; white-space: nowrap; }
+.row-inputs select, .row-inputs input { width: auto; margin: 0; }
+
+/* ── Small table for aggregation preview ─────────────── */
+.small-table { margin-top: 10px; font-size: .82rem; overflow-x: auto; }
+.small-table table { width: 100%; }
+
+/* ── Toast ────────────────────────────────────────────── */
+.toast { position: fixed; bottom: 28px; right: 28px; background: #1e293b; color: #fff;
+  padding: 12px 22px; border-radius: 8px; font-size: .9rem; opacity: 0; pointer-events: none;
+  transition: opacity .3s; z-index: 9999; max-width: 360px; }
+.toast.show { opacity: 1; }
+.toast.error { background: #dc2626; }
+
+/* ── All methods comparison ───────────────────────────── */
+.compare-table td.best { color: #10b981; font-weight: 700; }
+.stability-row td.consensus-1 { background: #fef3c7; font-weight: 700; }
+
+/* ── Scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
