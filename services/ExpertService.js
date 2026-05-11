@@ -152,16 +152,23 @@ class ExpertService {
 
   /**
    * Оновити оцінки альтернатив у БД на основі узгоджених оцінок.
+   * Ключ у Map alt.scores — це _id критерія (рядок), щоб getMatrix міг знайти оцінку.
    */
   async applyAggregatedToAlternatives(method = 'mean') {
     const Alternative = require('../models/Alternative');
-    const aggregated = await this.aggregate(method);
+    const Criteria    = require('../models/Criteria');
+    const aggregated  = await this.aggregate(method);
+
+    const criteriaList = await Criteria.find();
+    const nameToId = {};
+    criteriaList.forEach(c => { nameToId[c.name] = c._id.toString(); });
 
     for (const { alternativeName, criteriaName, score } of aggregated) {
       const alt = await Alternative.findOne({ name: alternativeName });
       if (!alt) continue;
-      // Зберігаємо за назвою критерія (ключ у Map)
-      alt.scores.set(criteriaName, score);
+      const cId = nameToId[criteriaName];
+      if (!cId) continue;
+      alt.scores.set(cId, score);
       await alt.save();
     }
     return aggregated;

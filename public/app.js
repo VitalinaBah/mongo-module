@@ -300,9 +300,9 @@ async function loadMatrix() {
     const head = `<table><thead><tr><th>Альтернатива</th>${criteria.map(c =>
       `<th>${c.name}<br><small style="color:#9ca3af">${c.type} | ${c.weight}</small></th>`).join('')}</tr></thead><tbody>`;
     const rows = matrix.map(alt => {
-      const cells = criteria.map(c => {
+      const cells = criteria.map((c, j) => {
         const cIdStr = c._id.toString();
-        const score  = alt.scores[cIdStr] ?? '';
+        const score  = Array.isArray(alt.scores) ? (alt.scores[j] ?? '') : (alt.scores[cIdStr] ?? '');
         return `<td><input type="number" class="cell-score" value="${score}" step="any"
           onblur="setScore('${alt._id}','${cIdStr}',this.value)"></td>`;
       }).join('');

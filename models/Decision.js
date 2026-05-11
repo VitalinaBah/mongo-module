@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const DecisionSchema = new mongoose.Schema({
   method: {
     type: String,
-    enum: ['WSM', 'SAW', 'TOPSIS'],
+    enum: ['WSM', 'SAW', 'TOPSIS', 'CAUTIOUS', 'MULTIPLICATIVE', 'ADDITIVE'],
     required: true
   },
   ranking: [
